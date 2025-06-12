@@ -1,125 +1,115 @@
 const express = require('express');
+const path = require('path');
+const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const bodyParser = require('body-parser');
-const compression = require('compression');
-const path = require('path');
-require('dotenv').config();
+const fs = require('fs');
 
+// Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"]
-    },
-  },
-}));
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests from this IP, try again later.'
-}));
-const contactLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: 'Too many contact form submissions, try again later.'
-});
-app.use(compression());
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Portfolio data
+// Sample portfolio data (replace with your actual data or connect to a database)
 const portfolioData = {
   personal: {
     name: "Your Name",
     title: "Full Stack Developer & 3D Enthusiast",
-    email: "imanetidjani1174@gmail.com",
-    phone: "0659660315",
-    location: "Your City, Country",
-    bio: "Passionate full-stack developer...",
+    bio: "Passionate about creating innovative web applications and immersive 3D experiences. Let's bring your ideas to life through code.",
+    email: "your.email@example.com",
     links: {
-      github: "https://github.com/tidjaniimane",
+      github: "https://github.com/yourusername",
       linkedin: "https://linkedin.com/in/yourprofile",
-      twitter: "https://twitter.com/yourusername",
+      twitter: "https://twitter.com/yourhandle",
       website: "https://yourwebsite.com"
     }
   },
-  skills: [
-    { category: "Frontend", items: ["React", "Vue.js", "Three.js"] },
-    { category: "Backend", items: ["Node.js", "Express"] }
-  ],
   projects: [
     {
       id: 1,
-      title: "E-Commerce Platform",
-      description: "Full-stack e-commerce solution...",
-      image: "/images/ecommerce-project.jpg",
-      technologies: ["React", "Node.js", "MongoDB"],
-      liveUrl: "https://your-ecommerce-demo.com",
-      githubUrl: "https://github.com/yourusername/ecommerce-platform",
-      featured: true,
-      category: "Full Stack"
+      title: "Interactive 3D Portfolio",
+      description: "A modern portfolio website featuring Three.js animations and interactive 3D elements.",
+      category: "3D/Creative",
+      technologies: ["Three.js", "JavaScript", "HTML5", "CSS3"],
+      liveUrl: "https://yourportfolio.com",
+      githubUrl: "https://github.com/yourusername/3d-portfolio"
+    },
+    {
+      id: 2,
+      title: "E-commerce Platform",
+      description: "Full-featured e-commerce platform with product management, cart functionality, and payment processing.",
+      category: "Full Stack",
+      technologies: ["React", "Node.js", "MongoDB", "Stripe API"],
+      liveUrl: "https://store.example.com",
+      githubUrl: "https://github.com/yourusername/ecommerce-platform"
+    },
+    {
+      id: 3,
+      title: "AI Image Generator",
+      description: "Web application that generates images using machine learning models with user-provided prompts.",
+      category: "AI/ML",
+      technologies: ["Python", "TensorFlow", "React", "Flask"],
+      liveUrl: "https://ai-images.example.com",
+      githubUrl: "https://github.com/yourusername/ai-image-generator"
     }
   ],
-  experience: [
+  skills: [
     {
-      company: "Tech Company Inc.",
-      position: "Senior Developer",
-      duration: "2022 - Present",
-      description: "Lead development of applications..."
+      category: "Frontend",
+      items: ["React", "Vue.js", "JavaScript", "TypeScript", "HTML5", "CSS3", "SASS"]
+    },
+    {
+      category: "Backend",
+      items: ["Node.js", "Express", "Python", "Django", "Flask", "REST APIs"]
+    },
+    {
+      category: "Database",
+      items: ["MongoDB", "PostgreSQL", "MySQL", "Firebase"]
+    },
+    {
+      category: "Cloud & DevOps",
+      items: ["AWS", "Docker", "Kubernetes", "CI/CD", "GitHub Actions"]
+    },
+    {
+      category: "Mobile",
+      items: ["React Native", "Flutter", "iOS Development"]
+    },
+    {
+      category: "3D & Design",
+      items: ["Three.js", "Blender", "WebGL", "Figma", "Adobe Creative Suite"]
     }
   ]
 };
 
-// Routes
-app.get('/api/portfolio', (req, res) => res.json(portfolioData));
-
-app.get('/api/projects', (req, res) => {
-  let { category, featured } = req.query;
-  let filtered = portfolioData.projects;
-
-  if (category) {
-    filtered = filtered.filter(p => p.category.toLowerCase() === category.toLowerCase());
-  }
-
-  if (featured === 'true') {
-    filtered = filtered.filter(p => p.featured);
-  }
-
-  res.json(filtered);
+// API Routes
+app.get('/api/portfolio', (req, res) => {
+  res.json(portfolioData);
 });
 
-app.get('/api/projects/:id', (req, res) => {
-  const project = portfolioData.projects.find(p => p.id === parseInt(req.params.id));
-  if (!project) return res.status(404).json({ error: 'Project not found' });
-  res.json(project);
-});
-
-app.post('/api/contact', contactLimiter, async (req, res) => {
-  const { name, email, subject, message } = req.body;
-
-  if (!name || !email || !subject || !message) {
-    return res.status(400).json({ success: false, error: 'All fields are required' });
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ success: false, error: 'Invalid email format' });
-  }
-
+app.post('/api/contact', async (req, res) => {
   try {
+    const { name, email, subject, message } = req.body;
+
+    // Validate input
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ success: false, error: "All fields are required" });
+    }
+
+    // In a real application, you would send an email here
+    // For demonstration, we'll just log it and return success
+    console.log('New contact form submission:');
+    console.log(`Name: ${name}`);
+    console.log(`Email: ${email}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Message: ${message}`);
+
+    // Example email sending with nodemailer (uncomment and configure)
+    /*
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -129,65 +119,44 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: email,
       to: process.env.EMAIL_USER,
-      subject: `Portfolio Contact: ${subject}`,
-      html: `
-        <h3>New Contact Form Submission</h3>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message.replace(/\n/g, '<br>')}</p>
-      `
-    };
-
-    const autoReply = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Thank you for your message!',
-      html: `
-        <h3>Thanks for reaching out!</h3>
-        <p>Hi ${name},</p>
-        <p>I’ve received your message and will respond shortly.</p>
-        <p>Best,<br>Your Name</p>
-      `
+      subject: `New Contact Form Submission: ${subject}`,
+      text: `You have a new message from ${name} (${email}):\n\n${message}`
     };
 
     await transporter.sendMail(mailOptions);
-    await transporter.sendMail(autoReply);
+    */
 
-    res.json({ success: true, message: 'Message sent successfully!' });
-  } catch (err) {
-    console.error('Email error:', err);
-    res.status(500).json({ success: false, error: 'Failed to send email. Try again later.' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error processing contact form:', error);
+    res.status(500).json({ success: false, error: "Failed to send message" });
   }
 });
 
 app.post('/api/analytics', (req, res) => {
-  const { event, data } = req.body;
-  console.log('Analytics Event:', event, data);
+  // In a real application, you would log analytics events to a database
+  console.log('Analytics event:', req.body.event, req.body.data);
   res.json({ success: true });
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString(), uptime: process.uptime() });
-});
-
+// Serve index.html for all other routes (client-side routing)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, error: 'Something went wrong!' });
-});
-
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server is running on port ${PORT}`);
 });
 
-module.exports = app;
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+});
