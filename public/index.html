@@ -1093,57 +1093,65 @@
         }
 
         // Initialize contact form
-        function initializeContactForm() {
-            const contactForm = document.getElementById('contactForm');
-            const formStatus = document.getElementById('formStatus');
-            
-            contactForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const formData = new FormData(contactForm);
-                const data = Object.fromEntries(formData);
-                
-                // Show loading state
-                const submitBtn = contactForm.querySelector('button[type="submit"]');
-                const originalText = submitBtn.textContent;
-                submitBtn.textContent = 'Sending...';
-                submitBtn.disabled = true;
-                
-                try {
-                    const response = await fetch('/api/contact', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        formStatus.innerHTML = '<div class="status-message success">Message sent successfully! I\'ll get back to you soon.</div>';
-                        contactForm.reset();
-                        
-                        // Track analytics
-                        trackEvent('contact_form_submit', { success: true });
-                    } else {
-                        formStatus.innerHTML = `<div class="status-message error">${result.error}</div>`;
-                    }
-                } catch (error) {
-                    formStatus.innerHTML = '<div class="status-message error">Failed to send message. Please try again later.</div>';
-                    console.error('Contact form error:', error);
-                }
-                
-                // Reset button
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                
-                // Clear status after 5 seconds
-                setTimeout(() => {
-                    formStatus.innerHTML = '';
-                }, 5000);
+function initializeContactForm() {
+    const contactForm = document.getElementById('contactForm');
+    const formStatus = document.getElementById('formStatus');
+
+    contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Get input values manually (safer)
+        const data = {
+            name: contactForm.name.value,
+            email: contactForm.email.value,
+            subject: contactForm.subject.value,
+            message: contactForm.message.value
+        };
+
+        // Show loading state
+        const submitBtn = contactForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Sending...';
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
             });
+
+            const result = await response.json();
+
+            if (result.success) {
+                formStatus.innerHTML = '<div class="status-message success">Message sent successfully! I\'ll get back to you soon.</div>';
+                contactForm.reset();
+
+                // Track analytics
+                if (typeof trackEvent === 'function') {
+                    trackEvent('contact_form_submit', { success: true });
+                }
+            } else {
+                formStatus.innerHTML = `<div class="status-message error">${result.error}</div>`;
+            }
+        } catch (error) {
+            formStatus.innerHTML = '<div class="status-message error">Failed to send message. Please try again later.</div>';
+            console.error('Contact form error:', error);
         }
+
+        // Reset button
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+
+        // Clear status after 5 seconds
+        setTimeout(() => {
+            formStatus.innerHTML = '';
+        }, 5000);
+    });
+}
+
 
         // Analytics tracking
         function trackEvent(eventName, eventData) {
